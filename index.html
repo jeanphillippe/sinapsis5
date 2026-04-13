@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sinapsis 5</title>
+  <style>
+    .row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- JSZip (para exportar evaluaciones como archivos individuales) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header id="app-header" class="app-header hidden">
+    <span class="app-logo" id="logo-tap">Sinapsis 5</span>
+    <span class="step-indicator" id="step-indicator">1 / 8</span>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main id="app-main">
+
+    <!-- PASO 0: Bienvenida -->
+    <section id="paso-0" class="paso active">
+      <div class="welcome-content">
+        <h1 class="brand-name">Sinapsis 5</h1>
+        <p class="brand-sub">Cuestionario breve</p>
+        <button class="btn-primary btn-lg" id="btn-start" onclick="App.goToStep(1)">Iniciar evaluación</button>
+        <button class="btn-ghost btn-sm" style="margin-top:12px;max-width:220px;" onclick="App.abrirDashboard()">Acceso médico</button>
+      </div>
+    </section>
+
+    <!-- PASO 1: Datos del paciente -->
+    <section id="paso-1" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Tus Datos</h2>
+
+        <div class="field-group">
+          <label class="field-label">Nombre completo</label>
+          <input type="text" id="f-nombre" class="input-text" placeholder="Nombre y apellido" autocomplete="off">
+        </div>
+
+        <div class="row">
+  <div class="field-group">
+    <label class="field-label">Edad</label>
+    <div class="stepper">
+      <button class="stepper-btn" onclick="App.stepperChange('edad',-1)">−</button>
+      <span class="stepper-val" id="edad-val">35</span>
+      <button class="stepper-btn" onclick="App.stepperChange('edad',1)">+</button>
+    </div>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">Género</label>
+    <div class="toggle-group" id="genero-group">
+      <button class="toggle-btn" data-val="masculino" onclick="App.selectToggle('genero','masculino',this)">Masculino</button>
+      <button class="toggle-btn" data-val="femenino" onclick="App.selectToggle('genero','femenino',this)">Femenino</button>
+    </div>
+  </div>
+</div>
+
+        <div class="field-group">
+          <label class="field-label">Teléfono</label>
+          <input type="tel" id="f-telefono" class="input-text" placeholder="Número de teléfono" autocomplete="off">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Nivel educativo</label>
+          <select id="f-educacion" class="input-select">
+            <option value="">Seleccionar nivel</option>
+            <option value="0">Sin estudios</option>
+            <option value="1">Primario incompleto</option>
+            <option value="2">Primario completo</option>
+            <option value="3">Secundario incompleto</option>
+            <option value="4">Secundario completo</option>
+            <option value="5">Terciario incompleto</option>
+            <option value="6">Terciario completo</option>
+            <option value="7">Posgrado</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Localidad</label>
+          <input type="text" id="f-localidad" class="input-text" placeholder="Ciudad o localidad" autocomplete="off">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Provincia</label>
+          <select id="f-provincia" class="input-select">
+            <option value="">Seleccionar provincia</option>
+            <option>Buenos Aires</option>
+            <option>CABA</option>
+            <option>Catamarca</option>
+            <option>Chaco</option>
+            <option>Chubut</option>
+            <option>Córdoba</option>
+            <option>Corrientes</option>
+            <option>Entre Ríos</option>
+            <option>Formosa</option>
+            <option>Jujuy</option>
+            <option selected>La Pampa</option>
+            <option>La Rioja</option>
+            <option>Mendoza</option>
+            <option>Misiones</option>
+            <option>Neuquén</option>
+            <option>Río Negro</option>
+            <option>Salta</option>
+            <option>San Juan</option>
+            <option>San Luis</option>
+            <option>Santa Cruz</option>
+            <option>Santa Fe</option>
+            <option>Santiago del Estero</option>
+            <option>Tierra del Fuego</option>
+            <option>Tucumán</option>
+          </select>
+        </div>
+
+      </div>
+      <div class="paso-footer">
+        <button class="btn-primary btn-lg" id="btn-paso1" disabled onclick="App.goToStep(2)">Continuar</button>
+      </div>
+    </section>
+
+    <!-- PASO 2: Memorización -->
+    <section id="paso-2" class="paso">
+      <div class="paso-inner centered">
+        <h2 class="paso-title">Memorización</h2>
+        <p class="paso-sub">Recordá estas palabras</p>
+        <div id="memo-word-display" class="memo-word"></div>
+        <div id="memo-progress-bar" class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="memo-bar-fill"></div>
+        </div>
+        <p id="memo-done-msg" class="memo-done hidden">¡Listo! Recordalas.</p>
+      </div>
+      <div class="paso-footer">
+        <button class="btn-primary btn-lg" id="btn-paso2" disabled onclick="App.startTests()">Continuar</button>
+      </div>
+    </section>
+
+    <!-- TEST 1: Atención -->
+    <section id="paso-3" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Test: Atención</h2>
+        <p class="paso-sub" id="t1-instruccion">Tocá la figura cada vez que aparezca</p>
+        <div id="t1-status" class="test-status">0 / 10</div>
+        <div id="t1-area" class="test-area"></div>
+      </div>
+    </section>
+
+    <!-- TEST 2: Asociación -->
+    <section id="paso-4" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Test: Asociación</h2>
+        <p class="paso-sub">Uní cada palabra con su imagen</p>
+        <div id="t2-area" class="t2-layout"></div>
+        <div class="paso-footer">
+          <button class="btn-primary btn-lg" id="btn-t2" disabled onclick="Tests.t2Confirm()">Confirmar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEST 3: Memoria diferida -->
+    <section id="paso-5" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Test: Memoria</h2>
+        <p class="paso-sub">Seleccioná las palabras que viste al principio</p>
+        <div id="t3-grid" class="t3-grid"></div>
+        <div class="paso-footer">
+          <button class="btn-primary btn-lg" id="btn-t3" disabled onclick="Tests.t3Confirm()">Confirmar selección</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEST 4: Secuencia -->
+    <section id="paso-6" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Test: Secuencia</h2>
+        <p class="paso-sub" id="t4-instruccion">Tocá los puntos en orden</p>
+        <div id="t4-area" class="test-area t4-area">
+          <svg id="t4-svg" width="100%" height="100%"></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEST 5: Correlación -->
+    <section id="paso-7" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Test: Correlación</h2>
+        <p class="paso-sub">Según la tabla, ¿qué número corresponde a cada símbolo?</p>
+        <div id="t5-table" class="t5-ref-table"></div>
+        <div id="t5-questions" class="t5-questions"></div>
+        <div class="paso-footer">
+          <button class="btn-primary btn-lg" id="btn-t5" disabled onclick="Tests.t5Confirm()">Confirmar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PASO FINAL: Resultados -->
+    <section id="paso-8" class="paso">
+      <div class="paso-inner">
+        <h2 class="paso-title">Resultados</h2>
+
+        <!-- Banner alerta clínica -->
+        <div class="alerta-clinica hidden" id="alerta-banner"></div>
+
+        <!-- Score display -->
+        <div class="score-display" id="score-display">
+          <div class="score-number" id="score-number">--</div>
+          <div class="score-label" id="score-label">de 32</div>
+          <div class="score-bar-wrap">
+            <div class="score-bar-fill" id="score-bar-fill"></div>
+          </div>
+          <div class="score-categoria" id="score-categoria">--</div>
+        </div>
+
+        <!-- Info caída longitudinal -->
+        <div class="hidden" id="caida-info" style="text-align:center;margin:-12px 0 16px;font-size:14px;"></div>
+
+        <!-- Tabla de dominios -->
+        <div class="results-table-wrap">
+          <table class="tabla-dominios" id="results-table">
+            <thead>
+              <tr>
+                <th>Dominio</th>
+                <th>Puntaje</th>
+                <th>Peso</th>
+                <th>Ponderado</th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Datos del paciente -->
+        <details class="paciente-details" id="paciente-details">
+          <summary>Datos del paciente</summary>
+          <div id="paciente-summary"></div>
+        </details>
+
+        <!-- Acciones -->
+        <div class="results-actions">
+          <button class="btn-primary btn-lg" onclick="App.solicitarTurno()">Solicitar turno</button>
+          <button class="btn-secondary btn-lg" onclick="App.recordarRepeticion()">Repetir en 6 meses</button>
+          <button class="btn-secondary btn-lg" onclick="App.exportJSON()">Descargar JSON</button>
+          <button class="btn-ghost btn-lg" onclick="location.reload()">Nueva evaluación</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       DASHBOARD MÉDICO
+       ============================================================ -->
+  <div id="dashboard-medico" class="hidden">
+   <div class="dash-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <h2 style="font-size:20px;font-weight:500;">Dashboard Médico</h2>
+      <button class="btn-ghost btn-sm" onclick="App.cerrarDashboard()">← Volver</button>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="dashboard-tabs">
+      <button class="active" data-tab="general"   onclick="Dashboard.showTab('general')">General</button>
+      <button data-tab="pacientes"  onclick="Dashboard.showTab('pacientes')">Pacientes</button>
+      <button data-tab="alertas"    onclick="Dashboard.showTab('alertas')">Alertas ⚠️</button>
+      <button data-tab="analisis"   onclick="Dashboard.showTab('analisis')">Análisis 🔍</button>
+      <button data-tab="importar"   onclick="Dashboard.showTab('importar')">Importar JSON</button>
+      <button data-tab="metricas"   onclick="Dashboard.showTab('metricas')">Métricas</button>
+    </nav>
+
+    <!-- TAB: General -->
+    <div class="tab-content active" id="tab-general">
+      <!-- Controles superiores -->
+      <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <!-- Toggle de vista -->
+        <div class="chart-view-toggle">
+          <button class="active" id="btn-vista-total"   onclick="Dashboard.setVista('total')">Score total</button>
+          <button             id="btn-vista-dominios" onclick="Dashboard.setVista('dominios')">Por dominio</button>
+        </div>
+        <!-- Filtro categoría (solo en vista total) -->
+        <div id="filtro-cat-wrap" style="display:flex;gap:0.5rem;align-items:center;">
+          <label style="font-size:13px;color:var(--text-s);">Categoría:</label>
+          <select id="filtro-categoria" class="input-select" style="width:auto;font-size:13px;padding:7px 10px;" onchange="Dashboard.filtrarCategoria()">
+            <option value="todos">Todos</option>
+            <option value="normal">Normal</option>
+            <option value="sospechoso">Sospechoso</option>
+            <option value="alto_riesgo">Alto riesgo</option>
+          </select>
+        </div>
+        <!-- Selector paciente (solo en vista dominios) -->
+        <div id="selector-paciente-wrap" style="display:none;gap:0.5rem;align-items:center;">
+          <label style="font-size:13px;color:var(--text-s);">Paciente:</label>
+          <select id="selector-paciente" class="input-select" style="width:auto;font-size:13px;padding:7px 10px;" onchange="Dashboard.renderDominios()">
+          </select>
+        </div>
+      </div>
+
+      <!-- Gráfico principal -->
+      <div style="position:relative;height:300px;margin-bottom:1rem;">
+        <canvas id="chart-general"></canvas>
+      </div>
+
+      <!-- Leyenda / nota -->
+      <div id="dash-leyenda" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:0.5rem;"></div>
+      <div id="dash-dominios-nota" style="display:none;font-size:12px;color:var(--text-s);margin-top:0.5rem;">
+        Eje Y: puntaje por dominio (0–5). El score total se muestra normalizado (÷6.4) para comparación visual.
+      </div>
+    </div>
+
+    <!-- TAB: Pacientes -->
+    <div class="tab-content" id="tab-pacientes">
+      <div style="overflow-x:auto;">
+        <table class="tabla-pacientes">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Edad</th>
+              <th>Último score</th>
+              <th>Categoría</th>
+              <th>Fecha</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="pacientes-tbody"></tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:var(--text-s);margin-top:0.75rem;">
+        "Ver evolución" lleva al gráfico por dominio de ese paciente en el tab General.
+      </p>
+    </div>
+
+    <!-- TAB: Alertas -->
+    <div class="tab-content" id="tab-alertas">
+      <div id="alertas-list" style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.5rem;"></div>
+    </div>
+
+    <!-- TAB: Análisis clínico -->
+    <div class="tab-content" id="tab-analisis">
+
+      <!-- Barra de filtros -->
+      <div class="analisis-filtros">
+        <div class="filtro-grupo">
+          <label>Localidad</label>
+          <input type="text" id="filtro-localidad" class="input-text filtro-input"
+                 placeholder="Ej: Córdoba" oninput="Dashboard.aplicarFiltros()">
+        </div>
+        <div class="filtro-grupo">
+          <label>Categoría</label>
+          <select id="filtro-cat-analisis" class="input-select filtro-input" onchange="Dashboard.aplicarFiltros()">
+            <option value="todos">Todas</option>
+            <option value="normal">Normal</option>
+            <option value="sospechoso">Sospechoso</option>
+            <option value="alto_riesgo">Alto riesgo</option>
+          </select>
+        </div>
+        <div class="filtro-grupo">
+          <label>Edad</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="filtro-edad-min" class="input-text filtro-input" placeholder="Min"
+                   min="18" max="110" style="width:70px;" oninput="Dashboard.aplicarFiltros()">
+            <span style="color:var(--text-s);font-size:13px;">–</span>
+            <input type="number" id="filtro-edad-max" class="input-text filtro-input" placeholder="Max"
+                   min="18" max="110" style="width:70px;" oninput="Dashboard.aplicarFiltros()">
+          </div>
+        </div>
+        <div class="filtro-grupo filtro-check">
+          <label>
+            <input type="checkbox" id="filtro-solo-alertas" onchange="Dashboard.aplicarFiltros()">
+            Solo con alertas
+          </label>
+        </div>
+        <button class="btn-ghost btn-sm" onclick="Dashboard.limpiarFiltros()" style="align-self:flex-end;">
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div id="analisis-count" style="font-size:13px;color:var(--text-s);margin-bottom:0.75rem;"></div>
+
+      <!-- Layout: lista izquierda + detalle derecha -->
+      <div class="analisis-layout">
+
+        <!-- Lista de evaluaciones -->
+        <div class="analisis-lista" id="analisis-lista">
+          <p style="color:var(--text-s);font-size:14px;">Cargando…</p>
+        </div>
+
+        <!-- Panel de detalle -->
+        <div class="analisis-detalle hidden" id="analisis-detalle">
+          <div class="detalle-header">
+            <div>
+              <div class="detalle-nombre" id="det-nombre">—</div>
+              <div class="detalle-meta" id="det-meta">—</div>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="Dashboard.cerrarDetalle()">✕</button>
+          </div>
+
+          <!-- Score summary -->
+          <div class="detalle-score-row">
+            <div class="detalle-score-num" id="det-score">—</div>
+            <div>
+              <div class="detalle-cat" id="det-cat">—</div>
+              <div class="detalle-alerta" id="det-alerta"></div>
+            </div>
+          </div>
+
+          <!-- Tabla de tests -->
+          <div class="detalle-section-title">Desglose por test</div>
+          <div class="detalle-tests" id="det-tests">
+            <!-- generado por JS -->
+          </div>
+
+          <!-- Ajustes de scoring -->
+          <div class="detalle-section-title" style="margin-top:1rem;">Ajustes aplicados</div>
+          <div class="detalle-ajustes" id="det-ajustes">
+            <!-- generado por JS -->
+          </div>
+
+          <!-- Comparación con evaluación anterior -->
+          <div id="det-comparacion" class="detalle-comparacion hidden">
+            <div class="detalle-section-title">Comparación con evaluación anterior</div>
+            <div id="det-comparacion-body"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB: Importar JSON -->
+    <div class="tab-content" id="tab-importar">
+      <p style="color:var(--text-s);font-size:14px;margin-bottom:1rem;">
+        Importá uno o varios archivos JSON exportados desde Sinapsis 5 para agregar registros al historial local.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <input type="file" id="json-import" accept=".json" multiple
+               style="color:var(--text);font-size:14px;background:var(--surface);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;">
+        <button class="btn-primary" style="max-width:200px;" onclick="Dashboard.importarArchivos()">Importar</button>
+        <div id="import-log" style="font-size:14px;color:var(--text-s);min-height:24px;"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Métricas -->
+    <div class="tab-content" id="tab-metricas">
+      <div class="metricas-grid">
+        <div class="metrica-card">
+          <div class="metrica-label">% Completitud</div>
+          <div class="metrica-val" id="met-completitud">—</div>
+        </div>
+        <div class="metrica-card">
+          <div class="metrica-label">Tiempo promedio</div>
+          <div class="metrica-val" id="met-tiempo">—</div>
+        </div>
+      </div>
+      <h3 style="font-size:15px;font-weight:500;margin:1.5rem 0 0.75rem;">Distribución de scores</h3>
+      <div style="position:relative;height:240px;">
+        <canvas id="chart-dist"></canvas>
+      </div>
+      <div style="margin-top:1.5rem;">
+        <h3 style="font-size:15px;font-weight:500;margin-bottom:0.75rem;">Exportar datos</h3>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn-secondary export-btn" onclick="Dashboard.exportarZIP()">
+            <span style="font-size:16px;">📦</span> Exportar ZIP<br>
+            <small>Un JSON por evaluación</small>
+          </button>
+          <button class="btn-secondary export-btn" onclick="Dashboard.exportarTodos()">
+            <span style="font-size:16px;">🗃️</span> Exportar JSON completo<br>
+            <small>Un archivo con todos</small>
+          </button>
+          <button class="btn-secondary export-btn" onclick="Dashboard.exportarCSV()">
+            <span style="font-size:16px;">📊</span> Exportar CSV<br>
+            <small>Para spreadsheet</small>
+          </button>
+        </div>
+        <div id="export-zip-log" style="font-size:13px;color:var(--text-s);margin-top:0.75rem;min-height:20px;"></div>
+        <p style="font-size:12px;color:var(--text-s);margin-top:0.5rem;line-height:1.6;">
+          El ZIP contiene un archivo <code style="font-family:monospace;color:var(--accent)">.json</code> por evaluación, en el formato de exportación de Sinapsis 5.
+          Para reimportarlos: descomprimí el ZIP e importá los archivos de forma individual o en lote desde el tab <strong>Importar JSON</strong>.
+        </p>
+      </div>
+    </div>
+
+   </div><!-- /dash-inner -->
+  </div><!-- /dashboard-medico -->
+
+  <!-- ADMIN CONSOLE -->
+  <div id="admin-console" class="admin-console hidden">
+    <div class="admin-header">
+      <span>AdminConsole</span>
+      <button onclick="AdminConsole.close()">✕</button>
+    </div>
+    <div class="admin-body">
+      <div class="admin-section">
+        <strong>AppState</strong>
+        <pre id="ac-state"></pre>
+      </div>
+      <div class="admin-section">
+        <strong>Score actual:</strong> <span id="ac-score">—</span><br>
+        <strong>Multiplicadores:</strong> <span id="ac-mults">—</span><br>
+        <strong>Cronómetro:</strong> <span id="ac-timer">—</span>
+      </div>
+      <div class="admin-section">
+        <strong>Log</strong>
+        <div id="ac-log" class="admin-log"></div>
+      </div>
+    </div>
+    <div class="admin-footer">
+      <button onclick="AdminConsole.copyState()">Copiar state</button>
+      <button onclick="AdminConsole.forceNext()">Forzar siguiente</button>
+    </div>
+  </div>
+
+  <script src="assets/js/banks.js"></script>
+  <script src="assets/js/scoring.js"></script>
+  <script src="assets/js/adminconsole.js"></script>
+  <script src="assets/js/tests.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
