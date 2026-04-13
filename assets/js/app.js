@@ -96,8 +96,20 @@ function importarLoteJSON(jsonArray) {
       const id = state.paciente?.telefono || state.paciente?.nombre;
       if (!id) return;
       if (!db[id]) db[id] = { paciente: state.paciente, historial: [] };
+
+      // Usar meta.fecha (formato "YYYY-MM-DD") o meta.fechaInicio (ISO), en ese orden
+      const rawFecha = state.meta?.fecha || state.meta?.fechaInicio;
+      const fechaISO = rawFecha
+        ? (rawFecha.includes('T') ? rawFecha : rawFecha + 'T12:00:00.000Z')
+        : new Date().toISOString();
+
+      // Deduplicar: no insertar si ya existe una entrada con la misma fecha normalizada
+      const fechaDia = fechaISO.slice(0, 10); // "YYYY-MM-DD"
+      const yaExiste = db[id].historial.some(h => (h.fecha || '').slice(0, 10) === fechaDia);
+      if (yaExiste) return;
+
       db[id].historial.push({
-        fecha: state.meta?.fechaInicio || new Date().toISOString(),
+        fecha: fechaISO,
         scoring: state.scoring,
         tests: state.tests,
         meta: state.meta
@@ -489,32 +501,25 @@ const Dashboard = {
   _vista: 'total', // 'total' | 'dominios'
 
   render() {
-    Dashboard.showTab('general');
-  },
-
-  showTab(tab) {
-    document.querySelectorAll('.dashboard-tabs button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-    const activeBtn = document.querySelector(`.dashboard-tabs button[data-tab="${tab}"]`);
-    const activeContent = document.getElementById(`tab-${tab}`);
-    if (activeBtn) activeBtn.classList.add('active');
-    if (activeContent) activeContent.classList.add('active');
-
-    // Destroy existing charts before re-rendering
+    // Destruir gráficos existentes
     Object.values(_dashCharts).forEach(c => { try { c.destroy(); } catch(e) {} });
     _dashCharts = {};
-
-    switch (tab) {
-      case 'general':   Dashboard.renderGeneral();   break;
-      case 'pacientes': Dashboard.renderPacientes(); break;
-      case 'alertas':   Dashboard.renderAlertas();   break;
-      case 'analisis':  Dashboard.renderAnalisis();  break;
-      case 'metricas':  Dashboard.renderMetricas();  break;
-    }
+    // Cerrar panel de detalle
+    Dashboard.cerrarDetalle();
+    // Renderizar todas las secciones
+    Dashboard.renderGeneral();
+    Dashboard.renderAnalisis();
+    Dashboard.renderAlertas();
+    Dashboard.renderMetricas();
+    Dashboard._renderStats();
   },
 
-  setVista(vista) {
+  // Compatibilidad: showTab ya no navega entre tabs, solo re-renderiza todo
+  showTab(_tab) {
+    Dashboard.render();
+  },
+
+  setVista(vista, pacienteId = null) {
     Dashboard._vista = vista;
 
     // Toggle button states
@@ -536,6 +541,11 @@ const Dashboard = {
       Dashboard.renderScoreTotal();
     } else {
       Dashboard._poblarSelectorPaciente();
+      // Si se pasó un pacienteId, pre-seleccionarlo antes de renderizar
+      if (pacienteId) {
+        const sel = document.getElementById('selector-paciente');
+        if (sel) sel.value = pacienteId;
+      }
       Dashboard.renderDominios();
     }
   },
@@ -592,9 +602,6 @@ const Dashboard = {
       leyendaHTML.push(`<span class="badge ${badgeCls}" style="background:${color}22;color:${color};border:1px solid ${color}55">${pac.paciente?.nombre || id}</span>`);
     });
 
-    const leyendaEl = document.getElementById('dash-leyenda');
-    if (leyendaEl) leyendaEl.innerHTML = leyendaHTML.join(' ');
-
     const canvas = document.getElementById('chart-general');
     if (!canvas || !window.Chart) return;
     if (_dashCharts.general) { try { _dashCharts.general.destroy(); } catch(e) {} }
@@ -619,7 +626,7 @@ const Dashboard = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#f0ece8', font: { size: 12 } } },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} / 32`
@@ -634,9 +641,6 @@ const Dashboard = {
       }
     });
 
-    if (datasets.length === 0 && leyendaEl) {
-      leyendaEl.innerHTML = '<span style="color:var(--text-s);font-size:14px;">No hay datos para mostrar.</span>';
-    }
   },
 
   /* ---- VISTA: Por dominio (5 líneas para un paciente) ---- */
@@ -657,10 +661,8 @@ const Dashboard = {
     const db  = obtenerTodosLosPacientes();
     const sel = document.getElementById('selector-paciente');
     const id  = sel?.value;
-    const leyendaEl = document.getElementById('dash-leyenda');
 
     if (!id || !db[id]) {
-      if (leyendaEl) leyendaEl.innerHTML = '<span style="color:var(--text-s);font-size:14px;">Sin datos para este paciente.</span>';
       return;
     }
 
@@ -668,7 +670,6 @@ const Dashboard = {
     const historial = pac.historial || [];
 
     if (historial.length === 0) {
-      if (leyendaEl) leyendaEl.innerHTML = '<span style="color:var(--text-s);font-size:14px;">Sin evaluaciones registradas.</span>';
       return;
     }
 
@@ -708,10 +709,6 @@ const Dashboard = {
       pointHoverRadius: 6
     });
 
-    if (leyendaEl) {
-      leyendaEl.innerHTML = `<span style="font-size:13px;color:var(--text-s);">Paciente: <strong style="color:var(--text)">${pac.paciente?.nombre || id}</strong> — ${historial.length} evaluación(es)</span>`;
-    }
-
     const canvas = document.getElementById('chart-general');
     if (!canvas || !window.Chart) return;
     if (_dashCharts.general) { try { _dashCharts.general.destroy(); } catch(e) {} }
@@ -723,7 +720,7 @@ const Dashboard = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#f0ece8', font: { size: 12 }, boxWidth: 14 } },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: ctx => {
@@ -757,21 +754,19 @@ const Dashboard = {
     if (Dashboard._vista === 'total') Dashboard.renderScoreTotal();
   },
 
-  /* ---- TAB PACIENTES ---- */
+  /* ---- TAB PACIENTES (legacy, no utilizado actualmente) ---- */
   renderPacientes() {
     const db = obtenerTodosLosPacientes();
     const tbody = document.getElementById('pacientes-tbody');
     if (!tbody) return;
-
     tbody.innerHTML = '';
     Object.entries(db).forEach(([id, pac]) => {
       if (!pac.historial || pac.historial.length === 0) return;
-      const last = pac.historial[pac.historial.length - 1];
-      const cat  = last?.scoring?.categoria || '—';
-      const score = last?.scoring?.scoreFinal ?? '—';
-      const fecha = last?.fecha ? new Date(last.fecha).toLocaleDateString('es-AR') : '—';
+      const last       = pac.historial[pac.historial.length - 1];
+      const cat        = last?.scoring?.categoria || '—';
+      const score      = last?.scoring?.scoreFinal ?? '—';
+      const fecha      = last?.fecha ? new Date(last.fecha).toLocaleDateString('es-AR') : '—';
       const badgeClass = cat === 'normal' ? 'badge-green' : cat === 'sospechoso' ? 'badge-yellow' : 'badge-red';
-
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${pac.paciente?.nombre || id}</td>
@@ -779,20 +774,39 @@ const Dashboard = {
         <td>${score}</td>
         <td><span class="badge ${badgeClass}">${cat}</span></td>
         <td>${fecha}</td>
-        <td><button class="btn-ghost btn-sm" onclick="Dashboard.verEvolucion('${CSS.escape(id)}')">Ver evolución</button></td>
+        <td></td>
       `;
+      const btnCell = tr.querySelector('td:last-child');
+      const btn = document.createElement('button');
+      btn.className = 'btn-ghost btn-sm';
+      btn.textContent = 'Ver evolución';
+      btn.addEventListener('click', () => Dashboard.setVista('dominios', id));
+      btnCell.appendChild(btn);
       tbody.appendChild(tr);
     });
   },
 
-  verEvolucion(id) {
-    // Navigate to General tab and show "Por dominio" view for this patient
-    Dashboard.showTab('general');        // populates selector + renders total view first
-    requestAnimationFrame(() => {
-      const sel = document.getElementById('selector-paciente');
-      if (sel) sel.value = id;          // pre-select the patient
-      Dashboard.setVista('dominios');   // switch to domain view (re-renders chart)
+  _renderStats() {
+    const db   = obtenerTodosLosPacientes();
+    const ids  = Object.keys(db);
+    let totalEvals = 0, totalAlertas = 0, sumaScores = 0, nScores = 0;
+    ids.forEach(id => {
+      const pac = db[id];
+      (pac.historial || []).forEach(h => {
+        totalEvals++;
+        if (h.scoring?.alerta) totalAlertas++;
+        if (h.scoring?.scoreFinal != null) { sumaScores += h.scoring.scoreFinal; nScores++; }
+      });
     });
+    const avg = nScores > 0 ? (sumaScores / nScores).toFixed(1) : '—';
+    const el  = document.getElementById('dash-stats-row');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="dash-stat"><span class="dash-stat-val">${ids.length}</span><span class="dash-stat-lbl">Pacientes</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${totalEvals}</span><span class="dash-stat-lbl">Evaluaciones</span></div>
+      <div class="dash-stat dash-stat-warn"><span class="dash-stat-val">${totalAlertas}</span><span class="dash-stat-lbl">Alertas</span></div>
+      <div class="dash-stat"><span class="dash-stat-val">${avg}</span><span class="dash-stat-lbl">Score prom.</span></div>
+    `;
   },
 
   /* ---- TAB ALERTAS ---- */
@@ -989,11 +1003,11 @@ const Dashboard = {
 
     Dashboard._filtros = { localidad, categoria, edadMin: edadMinRaw, edadMax: edadMaxRaw, soloAlertas };
 
-    const db   = obtenerTodosLosPacientes();
-    const lista = [];
+    const db             = obtenerTodosLosPacientes();
+    const pacientesLista = [];
 
     Object.entries(db).forEach(([id, pac]) => {
-      const p = pac.paciente || {};
+      const p    = pac.paciente || {};
       const edad = parseInt(p.edad) || 0;
       const loc  = (p.localidad || '').toLowerCase();
 
@@ -1001,56 +1015,74 @@ const Dashboard = {
       if (localidad && !loc.includes(localidad)) return;
       if (edad < edadMinRaw || edad > edadMaxRaw) return;
 
-      // Agrego cada evaluación del historial
-      (pac.historial || []).forEach((h, idx) => {
+      // El paciente pasa si al menos una de sus evaluaciones cumple los filtros de categoría/alertas
+      const tieneEvals = (pac.historial || []).some(h => {
         const cat = h.scoring?.categoria || 'normal';
-        if (categoria !== 'todos' && cat !== categoria) return;
-        if (soloAlertas && !h.scoring?.alerta) return;
-
-        lista.push({ id, pac, h, idx });
+        if (categoria !== 'todos' && cat !== categoria) return false;
+        if (soloAlertas && !h.scoring?.alerta) return false;
+        return true;
       });
+      if (!tieneEvals) return;
+
+      pacientesLista.push({ id, pac });
     });
 
-    // Ordenar: más reciente primero
-    lista.sort((a, b) => new Date(b.h.fecha || 0) - new Date(a.h.fecha || 0));
+    // Ordenar por evaluación más reciente
+    pacientesLista.sort((a, b) => {
+      const fA = a.pac.historial?.slice(-1)[0]?.fecha || '';
+      const fB = b.pac.historial?.slice(-1)[0]?.fecha || '';
+      return fB.localeCompare(fA);
+    });
 
-    // Render lista
+    const countEl = document.getElementById('analisis-count');
+    if (countEl) countEl.textContent = `${pacientesLista.length} paciente(s)`;
+
+    Dashboard._renderPacienteCards(pacientesLista);
+  },
+
+  _renderPacienteCards(pacientesLista) {
     const contenedor = document.getElementById('analisis-lista');
-    const countEl    = document.getElementById('analisis-count');
-    if (countEl) countEl.textContent = `${lista.length} evaluación(es) encontrada(s)`;
-
     if (!contenedor) return;
 
-    if (lista.length === 0) {
-      contenedor.innerHTML = '<p class="analisis-empty">Sin evaluaciones para los filtros aplicados.</p>';
+    if (pacientesLista.length === 0) {
+      contenedor.innerHTML = '<p class="analisis-empty">Sin pacientes para los filtros aplicados.</p>';
       return;
     }
 
     contenedor.innerHTML = '';
-    lista.forEach(({ id, pac, h, idx }) => {
-      const p        = pac.paciente || {};
-      const cat      = h.scoring?.categoria || '—';
-      const score    = h.scoring?.scoreFinal ?? '—';
-      const alerta   = h.scoring?.alerta;
-      const fecha    = h.fecha ? new Date(h.fecha).toLocaleDateString('es-AR') : '—';
-      const catCls   = cat === 'normal' ? 'badge-green' : cat === 'sospechoso' ? 'badge-yellow' : 'badge-red';
-      const isActive = Dashboard._evalSeleccionada?.id === id && Dashboard._evalSeleccionada?.evalIdx === idx;
+    pacientesLista.forEach(({ id, pac }) => {
+      const p         = pac.paciente || {};
+      const historial = pac.historial || [];
+      const last      = historial[historial.length - 1];
+      const cat       = last?.scoring?.categoria || '—';
+      const score     = last?.scoring?.scoreFinal ?? '—';
+      const alerta    = last?.scoring?.alerta;
+      const catCls    = cat === 'normal' ? 'badge-green' : cat === 'sospechoso' ? 'badge-yellow' : 'badge-red';
+      const isActive  = Dashboard._evalSeleccionada?.id === id;
+      const lastIdx   = historial.length - 1;
+
+      // Mini-barra de evolución de scores
+      const scores    = historial.map(h => h.scoring?.scoreFinal ?? 0);
+      const miniBar   = scores.map((s, i) => {
+        const pct = Math.round((s / 32) * 100);
+        const c   = (historial[i].scoring?.categoria || '') === 'normal' ? '#7ab894'
+                  : (historial[i].scoring?.categoria || '') === 'sospechoso' ? '#d4a85a' : '#c45c5c';
+        return `<span class="pac-mini-bar-seg" style="height:${Math.max(pct, 8)}%;background:${c}"></span>`;
+      }).join('');
 
       const card = document.createElement('div');
-      card.className = `eval-card${isActive ? ' active' : ''}`;
-      card.dataset.id  = id;
-      card.dataset.idx = idx;
+      card.className = `pac-card${isActive ? ' active' : ''}`;
+      card.dataset.id = id;
       card.innerHTML = `
-        <div class="eval-card-top">
-          <span class="eval-nombre">${p.nombre || id}</span>
-          <span class="badge ${catCls}">${score} / 32</span>
+        <div class="pac-card-top">
+          <span class="pac-nombre">${p.nombre || id}</span>
+          <span class="badge ${catCls}">${score}/32</span>
         </div>
-        <div class="eval-card-meta">
-          ${p.localidad || '—'} · ${p.edad || '?'} años · ${fecha}
-        </div>
-        ${alerta ? `<div class="eval-alertas">${alerta.split('+').map(a => `<span class="badge badge-red alerta-sm">${_alertaLabel(a)}</span>`).join('')}</div>` : ''}
+        <div class="pac-card-meta">${p.localidad || '—'} · ${p.edad || '?'} a · ${historial.length} eval.</div>
+        <div class="pac-mini-bar">${miniBar}</div>
+        ${alerta ? `<div class="eval-alertas" style="margin-top:4px;">${alerta.split('+').map(a => `<span class="badge badge-red alerta-sm">${_alertaLabel(a)}</span>`).join('')}</div>` : ''}
       `;
-      card.addEventListener('click', () => Dashboard.verDetalleEvaluacion(id, idx));
+      card.addEventListener('click', () => Dashboard.verDetalleEvaluacion(id, lastIdx));
       contenedor.appendChild(card);
     });
   },
@@ -1063,12 +1095,55 @@ const Dashboard = {
     const h = pac.historial[evalIdx];
     if (!h) return;
 
+    const prevId = Dashboard._evalSeleccionada?.id;
     Dashboard._evalSeleccionada = { id, evalIdx };
 
-    // Resaltar card activa
-    document.querySelectorAll('.eval-card').forEach(c => {
-      c.classList.toggle('active', c.dataset.id === id && parseInt(c.dataset.idx) === evalIdx);
+    // Resaltar pac-card activa (agrupada por paciente)
+    document.querySelectorAll('.pac-card').forEach(c => {
+      c.classList.toggle('active', c.dataset.id === id);
     });
+
+    // ── Actualizar gráfico al dominio del paciente seleccionado ──
+    // Solo re-renderizar si cambió el paciente (evitar re-render al navegar entre fechas)
+    if (prevId !== id) {
+      Dashboard.setVista('dominios', id);
+    }
+
+    // ── Timeline de evaluaciones del paciente ──
+    const timelineEl = document.getElementById('det-timeline');
+    if (timelineEl) {
+      if (pac.historial.length > 1) {
+        timelineEl.innerHTML = '';
+        const label = document.createElement('div');
+        label.className = 'tl-label';
+        label.textContent = 'Historial del paciente';
+        timelineEl.appendChild(label);
+
+        const pillsWrap = document.createElement('div');
+        pillsWrap.className = 'tl-pills';
+
+        pac.historial.forEach((ev, i) => {
+          const d     = ev.fecha
+            ? new Date(ev.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+            : `Eval ${i + 1}`;
+          const score = ev.scoring?.scoreFinal != null ? String(ev.scoring.scoreFinal) : '';
+          const cat   = ev.scoring?.categoria || '';
+          const dot   = cat === 'normal' ? 'tl-dot-ok' : cat === 'sospechoso' ? 'tl-dot-warn' : cat === 'alto_riesgo' ? 'tl-dot-err' : '';
+
+          const btn = document.createElement('button');
+          btn.className = `det-tl-pill${i === evalIdx ? ' active' : ''}`;
+          btn.title = `Evaluación ${i + 1}${ev.fecha ? ' — ' + new Date(ev.fecha).toLocaleDateString('es-AR') : ''}`;
+          btn.innerHTML = `<span class="tl-dot ${dot}"></span><span class="tl-date">${d}</span>${score ? `<span class="tl-score">${score}</span>` : ''}`;
+          btn.addEventListener('click', () => Dashboard.verDetalleEvaluacion(id, i));
+          pillsWrap.appendChild(btn);
+        });
+
+        timelineEl.appendChild(pillsWrap);
+        timelineEl.classList.remove('hidden');
+      } else {
+        timelineEl.classList.add('hidden');
+      }
+    }
 
     const p     = pac.paciente || {};
     const sc    = h.scoring   || {};
@@ -1076,6 +1151,11 @@ const Dashboard = {
     const detalle = document.getElementById('analisis-detalle');
     if (!detalle) return;
     detalle.classList.remove('hidden');
+
+    // Scroll suave al panel de detalle (especialmente en mobile donde queda debajo)
+    requestAnimationFrame(() => {
+      detalle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 
     // Header
     document.getElementById('det-nombre').textContent = p.nombre || id;
@@ -1199,6 +1279,8 @@ const Dashboard = {
 
   cerrarDetalle() {
     document.getElementById('analisis-detalle')?.classList.add('hidden');
+    const tl = document.getElementById('det-timeline');
+    if (tl) { tl.innerHTML = ''; tl.classList.add('hidden'); }
     document.querySelectorAll('.eval-card').forEach(c => c.classList.remove('active'));
     Dashboard._evalSeleccionada = null;
   },
@@ -1271,6 +1353,13 @@ const Dashboard = {
         if (logEl) logEl.textContent = `❌ Error: ${err.message}`;
         AdminConsole.log('Error generando ZIP: ' + err.message);
       });
+  },
+
+  limpiarBaseDatos() {
+    if (!confirm('¿Eliminar todos los datos guardados? Esta acción no se puede deshacer.')) return;
+    localStorage.removeItem(DB_KEY);
+    document.getElementById('import-log').textContent = '✅ Base de datos limpiada. Podés reimportar el JSON.';
+    Dashboard.render();
   },
 
   exportarCSV() {

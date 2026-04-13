@@ -260,95 +260,57 @@
   </main>
 
   <!-- ============================================================
-       DASHBOARD MÉDICO
+       DASHBOARD MÉDICO — Vista unificada
        ============================================================ -->
   <div id="dashboard-medico" class="hidden">
    <div class="dash-inner">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-      <h2 style="font-size:20px;font-weight:500;">Dashboard Médico</h2>
+
+    <!-- Header -->
+    <div class="dash-header-row">
+      <h2 class="dash-title">Dashboard Médico</h2>
       <button class="btn-ghost btn-sm" onclick="App.cerrarDashboard()">← Volver</button>
     </div>
 
-    <!-- Tabs -->
-    <nav class="dashboard-tabs">
-      <button class="active" data-tab="general"   onclick="Dashboard.showTab('general')">General</button>
-      <button data-tab="pacientes"  onclick="Dashboard.showTab('pacientes')">Pacientes</button>
-      <button data-tab="alertas"    onclick="Dashboard.showTab('alertas')">Alertas ⚠️</button>
-      <button data-tab="analisis"   onclick="Dashboard.showTab('analisis')">Análisis 🔍</button>
-      <button data-tab="importar"   onclick="Dashboard.showTab('importar')">Importar JSON</button>
-      <button data-tab="metricas"   onclick="Dashboard.showTab('metricas')">Métricas</button>
-    </nav>
+    <!-- Stats strip -->
+    <div class="dash-stats" id="dash-stats-row"></div>
 
-    <!-- TAB: General -->
-    <div class="tab-content active" id="tab-general">
-      <!-- Controles superiores -->
-      <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
-        <!-- Toggle de vista -->
+    <!-- ── SECCIÓN: Evolución ── -->
+    <section class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Evolución</span>
         <div class="chart-view-toggle">
           <button class="active" id="btn-vista-total"   onclick="Dashboard.setVista('total')">Score total</button>
           <button             id="btn-vista-dominios" onclick="Dashboard.setVista('dominios')">Por dominio</button>
         </div>
-        <!-- Filtro categoría (solo en vista total) -->
-        <div id="filtro-cat-wrap" style="display:flex;gap:0.5rem;align-items:center;">
-          <label style="font-size:13px;color:var(--text-s);">Categoría:</label>
-          <select id="filtro-categoria" class="input-select" style="width:auto;font-size:13px;padding:7px 10px;" onchange="Dashboard.filtrarCategoria()">
-            <option value="todos">Todos</option>
-            <option value="normal">Normal</option>
-            <option value="sospechoso">Sospechoso</option>
-            <option value="alto_riesgo">Alto riesgo</option>
-          </select>
-        </div>
-        <!-- Selector paciente (solo en vista dominios) -->
-        <div id="selector-paciente-wrap" style="display:none;gap:0.5rem;align-items:center;">
-          <label style="font-size:13px;color:var(--text-s);">Paciente:</label>
-          <select id="selector-paciente" class="input-select" style="width:auto;font-size:13px;padding:7px 10px;" onchange="Dashboard.renderDominios()">
-          </select>
-        </div>
       </div>
-
-      <!-- Gráfico principal -->
-      <div style="position:relative;height:300px;margin-bottom:1rem;">
+      <div id="filtro-cat-wrap" class="dash-control-row">
+        <label>Categoría</label>
+        <select id="filtro-categoria" class="input-select input-select-sm" onchange="Dashboard.filtrarCategoria()">
+          <option value="todos">Todos</option>
+          <option value="normal">Normal</option>
+          <option value="sospechoso">Sospechoso</option>
+          <option value="alto_riesgo">Alto riesgo</option>
+        </select>
+      </div>
+      <div id="selector-paciente-wrap" class="dash-control-row" style="display:none">
+        <label>Paciente</label>
+        <select id="selector-paciente" class="input-select input-select-sm" onchange="Dashboard.renderDominios()"></select>
+      </div>
+      <div style="position:relative;height:260px;margin-top:0.75rem;">
         <canvas id="chart-general"></canvas>
       </div>
-
-      <!-- Leyenda / nota -->
-      <div id="dash-leyenda" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:0.5rem;"></div>
-      <div id="dash-dominios-nota" style="display:none;font-size:12px;color:var(--text-s);margin-top:0.5rem;">
-        Eje Y: puntaje por dominio (0–5). El score total se muestra normalizado (÷6.4) para comparación visual.
+      <div id="dash-dominios-nota" class="dash-nota" style="display:none">
+        Eje Y: puntaje por dominio (0–5). Score total normalizado (÷6.4).
       </div>
-    </div>
+    </section>
 
-    <!-- TAB: Pacientes -->
-    <div class="tab-content" id="tab-pacientes">
-      <div style="overflow-x:auto;">
-        <table class="tabla-pacientes">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Edad</th>
-              <th>Último score</th>
-              <th>Categoría</th>
-              <th>Fecha</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody id="pacientes-tbody"></tbody>
-        </table>
+    <!-- ── SECCIÓN: Análisis clínico ── -->
+    <section class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Análisis clínico</span>
       </div>
-      <p style="font-size:12px;color:var(--text-s);margin-top:0.75rem;">
-        "Ver evolución" lleva al gráfico por dominio de ese paciente en el tab General.
-      </p>
-    </div>
 
-    <!-- TAB: Alertas -->
-    <div class="tab-content" id="tab-alertas">
-      <div id="alertas-list" style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.5rem;"></div>
-    </div>
-
-    <!-- TAB: Análisis clínico -->
-    <div class="tab-content" id="tab-analisis">
-
-      <!-- Barra de filtros -->
+      <!-- Filtros -->
       <div class="analisis-filtros">
         <div class="filtro-grupo">
           <label>Localidad</label>
@@ -381,22 +343,24 @@
           </label>
         </div>
         <button class="btn-ghost btn-sm" onclick="Dashboard.limpiarFiltros()" style="align-self:flex-end;">
-          Limpiar filtros
+          Limpiar
         </button>
       </div>
 
       <div id="analisis-count" style="font-size:13px;color:var(--text-s);margin-bottom:0.75rem;"></div>
 
-      <!-- Layout: lista izquierda + detalle derecha -->
+      <!-- Layout: lista + detalle -->
       <div class="analisis-layout">
-
-        <!-- Lista de evaluaciones -->
         <div class="analisis-lista" id="analisis-lista">
           <p style="color:var(--text-s);font-size:14px;">Cargando…</p>
         </div>
 
         <!-- Panel de detalle -->
         <div class="analisis-detalle hidden" id="analisis-detalle">
+
+          <!-- Timeline de evaluaciones del paciente -->
+          <div class="det-timeline hidden" id="det-timeline"></div>
+
           <div class="detalle-header">
             <div>
               <div class="detalle-nombre" id="det-nombre">—</div>
@@ -414,43 +378,72 @@
             </div>
           </div>
 
-          <!-- Tabla de tests -->
+          <!-- Desglose por test -->
           <div class="detalle-section-title">Desglose por test</div>
-          <div class="detalle-tests" id="det-tests">
-            <!-- generado por JS -->
-          </div>
+          <div class="detalle-tests" id="det-tests"></div>
 
           <!-- Ajustes de scoring -->
           <div class="detalle-section-title" style="margin-top:1rem;">Ajustes aplicados</div>
-          <div class="detalle-ajustes" id="det-ajustes">
-            <!-- generado por JS -->
-          </div>
+          <div class="detalle-ajustes" id="det-ajustes"></div>
 
-          <!-- Comparación con evaluación anterior -->
+          <!-- Comparación (compacta, solo delta) -->
           <div id="det-comparacion" class="detalle-comparacion hidden">
-            <div class="detalle-section-title">Comparación con evaluación anterior</div>
+            <div class="detalle-section-title">Respecto a evaluación anterior</div>
             <div id="det-comparacion-body"></div>
           </div>
+
         </div>
-
       </div>
-    </div>
+    </section>
 
-    <!-- TAB: Importar JSON -->
-    <div class="tab-content" id="tab-importar">
-      <p style="color:var(--text-s);font-size:14px;margin-bottom:1rem;">
-        Importá uno o varios archivos JSON exportados desde Sinapsis 5 para agregar registros al historial local.
-      </p>
-      <div style="display:flex;flex-direction:column;gap:1rem;">
-        <input type="file" id="json-import" accept=".json" multiple
-               style="color:var(--text);font-size:14px;background:var(--surface);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;">
-        <button class="btn-primary" style="max-width:200px;" onclick="Dashboard.importarArchivos()">Importar</button>
-        <div id="import-log" style="font-size:14px;color:var(--text-s);min-height:24px;"></div>
+    <!-- ── SECCIÓN: Alertas ── -->
+    <section class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Alertas</span>
+        <span class="dash-section-badge" id="alertas-badge"></span>
       </div>
-    </div>
+      <div id="alertas-list" style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.5rem;"></div>
+    </section>
 
-    <!-- TAB: Métricas -->
-    <div class="tab-content" id="tab-metricas">
+    <!-- ── SECCIÓN: Datos ── -->
+    <section class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Importar / Exportar</span>
+      </div>
+      <div class="datos-grid">
+        <div>
+          <p class="dash-nota" style="margin-bottom:0.75rem;">Importá archivos JSON exportados desde Sinapsis 5.</p>
+          <input type="file" id="json-import" accept=".json" multiple
+                 style="color:var(--text);font-size:13px;background:var(--surface);border:1.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px;width:100%;margin-bottom:0.75rem;">
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button class="btn-primary" style="max-width:180px;" onclick="Dashboard.importarArchivos()">Importar</button>
+            <button class="btn-ghost btn-sm" onclick="Dashboard.limpiarBaseDatos()" style="color:var(--danger);border-color:rgba(196,92,92,0.3);font-size:12px;">🗑 Limpiar base</button>
+          </div>
+          <div id="import-log" class="dash-log"></div>
+        </div>
+        <div>
+          <p class="dash-nota" style="margin-bottom:0.75rem;">Exportar todos los datos registrados.</p>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <button class="btn-secondary export-btn" onclick="Dashboard.exportarZIP()">
+              <span>📦</span> ZIP<br><small>Un JSON por evaluación</small>
+            </button>
+            <button class="btn-secondary export-btn" onclick="Dashboard.exportarTodos()">
+              <span>🗃️</span> JSON<br><small>Un archivo con todos</small>
+            </button>
+            <button class="btn-secondary export-btn" onclick="Dashboard.exportarCSV()">
+              <span>📊</span> CSV<br><small>Para spreadsheet</small>
+            </button>
+          </div>
+          <div id="export-zip-log" class="dash-log"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Métricas ── -->
+    <section class="dash-section">
+      <div class="dash-section-header">
+        <span class="dash-section-title">Métricas</span>
+      </div>
       <div class="metricas-grid">
         <div class="metrica-card">
           <div class="metrica-label">% Completitud</div>
@@ -461,33 +454,10 @@
           <div class="metrica-val" id="met-tiempo">—</div>
         </div>
       </div>
-      <h3 style="font-size:15px;font-weight:500;margin:1.5rem 0 0.75rem;">Distribución de scores</h3>
-      <div style="position:relative;height:240px;">
+      <div style="position:relative;height:220px;margin-top:1.25rem;">
         <canvas id="chart-dist"></canvas>
       </div>
-      <div style="margin-top:1.5rem;">
-        <h3 style="font-size:15px;font-weight:500;margin-bottom:0.75rem;">Exportar datos</h3>
-        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-          <button class="btn-secondary export-btn" onclick="Dashboard.exportarZIP()">
-            <span style="font-size:16px;">📦</span> Exportar ZIP<br>
-            <small>Un JSON por evaluación</small>
-          </button>
-          <button class="btn-secondary export-btn" onclick="Dashboard.exportarTodos()">
-            <span style="font-size:16px;">🗃️</span> Exportar JSON completo<br>
-            <small>Un archivo con todos</small>
-          </button>
-          <button class="btn-secondary export-btn" onclick="Dashboard.exportarCSV()">
-            <span style="font-size:16px;">📊</span> Exportar CSV<br>
-            <small>Para spreadsheet</small>
-          </button>
-        </div>
-        <div id="export-zip-log" style="font-size:13px;color:var(--text-s);margin-top:0.75rem;min-height:20px;"></div>
-        <p style="font-size:12px;color:var(--text-s);margin-top:0.5rem;line-height:1.6;">
-          El ZIP contiene un archivo <code style="font-family:monospace;color:var(--accent)">.json</code> por evaluación, en el formato de exportación de Sinapsis 5.
-          Para reimportarlos: descomprimí el ZIP e importá los archivos de forma individual o en lote desde el tab <strong>Importar JSON</strong>.
-        </p>
-      </div>
-    </div>
+    </section>
 
    </div><!-- /dash-inner -->
   </div><!-- /dashboard-medico -->
