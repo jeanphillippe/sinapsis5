@@ -523,6 +523,17 @@ syncGeneroDropdown(select) {
     }
   },
 
+  /* ── Tema claro / oscuro ── */
+  toggleTheme() {
+    const isLight = document.body.classList.toggle('light');
+    try { localStorage.setItem('sinapsis-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+      btn.textContent = isLight ? '🌙' : '☀️';
+      btn.title       = isLight ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+    }
+  },
+
   forceNext() {
     const next = Math.min(currentStep + 1, STEPS.length - 1);
     switch (currentStep) {
@@ -1671,6 +1682,15 @@ const DashboardModelo = {
 document.addEventListener('DOMContentLoaded', () => {
   AdminConsole.init();
   DashboardModelo.init();
+
+  // Restaurar tema guardado
+  try {
+    if (localStorage.getItem('sinapsis-theme') === 'light') {
+      document.body.classList.add('light');
+      const btn = document.getElementById('theme-toggle-btn');
+      if (btn) { btn.textContent = '🌙'; btn.title = 'Cambiar a modo oscuro'; }
+    }
+  } catch(e) {}
 
   const p0 = document.getElementById('paso-0');
   if (p0) p0.classList.add('active');

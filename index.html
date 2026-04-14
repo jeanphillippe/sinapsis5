@@ -23,8 +23,11 @@
 
   <!-- HEADER -->
   <header id="app-header" class="app-header hidden">
-    <span class="app-logo" id="logo-tap">Sinapsis 5</span>
+    <img class="app-logo" id="logo-tap" src="logosinapsis.png" alt="Sinapsis">
     <span class="step-indicator" id="step-indicator">1 / 8</span>
+    <div class="header-btns" id="header-btns">
+      <button class="theme-toggle-btn" id="theme-toggle-btn" title="Cambiar a modo claro" onclick="App.toggleTheme()">☀️</button>
+    </div>
   </header>
 
   <!-- MAIN CONTAINER -->
@@ -33,7 +36,7 @@
     <!-- PASO 0: Bienvenida -->
     <section id="paso-0" class="paso active">
       <div class="welcome-content">
-        <h1 class="brand-name">Sinapsis 5</h1>
+        <img class="brand-logo" src="logosinapsis.png" alt="Sinapsis">
         <p class="brand-sub">Cuestionario breve</p>
         <button class="btn-primary btn-lg" id="btn-start" onclick="App.goToStep(1)">Iniciar evaluación</button>
         <button class="btn-ghost btn-sm" style="margin-top:12px;max-width:220px;" onclick="App.abrirDashboard()">Acceso médico</button>

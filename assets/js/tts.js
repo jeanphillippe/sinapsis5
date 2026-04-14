@@ -101,15 +101,16 @@ const TTS = (() => {
 
   /* ── Botón en el header ── */
   function addMuteButton() {
-    const header = document.getElementById('app-header');
-    if (!header || document.getElementById('tts-mute-btn')) return;
+    if (document.getElementById('tts-mute-btn')) return;
+    const container = document.getElementById('header-btns') || document.getElementById('app-header');
+    if (!container) return;
     const btn = document.createElement('button');
     btn.id          = 'tts-mute-btn';
     btn.className   = 'tts-mute-btn';
     btn.textContent = '🔊';
     btn.title       = 'Silenciar voz';
     btn.onclick     = toggleMute;
-    header.appendChild(btn);
+    container.appendChild(btn);
   }
 
   /* ── Patches ── */

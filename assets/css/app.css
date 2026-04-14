@@ -2,7 +2,7 @@
    SINAPSIS 5 — Design System
    ============================================================ */
 
-/* Tokens */
+/* Tokens — dark (default) */
 :root {
   --bg:        #1a1614;
   --surface:   #231f1c;
@@ -17,6 +17,30 @@
   --r-btn:     12px;
   --shadow:    0 4px 24px rgba(0,0,0,0.4);
   --trans:     300ms ease;
+  --logo-filter: brightness(0) invert(1);
+  --hdr-btn-border: rgba(255,255,255,0.12);
+  --hdr-btn-border-hover: rgba(255,255,255,0.22);
+  --hdr-btn-bg-hover: rgba(255,255,255,0.06);
+  --hdr-btn-bg-active: rgba(255,255,255,0.12);
+}
+
+/* Tokens — light */
+body.light {
+  --bg:        #f5f2ef;
+  --surface:   #ffffff;
+  --accent:    #b06e48;
+  --accent-s:  #8b5e3c;
+  --text:      #1a1614;
+  --text-s:    #6b5f57;
+  --shadow:    0 4px 24px rgba(0,0,0,0.12);
+  --logo-filter: none;
+  --hdr-btn-border: rgba(0,0,0,0.14);
+  --hdr-btn-border-hover: rgba(0,0,0,0.28);
+  --hdr-btn-bg-hover: rgba(0,0,0,0.05);
+  --hdr-btn-bg-active: rgba(0,0,0,0.10);
+}
+body.light .paso-footer {
+  background: linear-gradient(to bottom, transparent, var(--bg) 40%);
 }
 
 /* Reset */
@@ -102,23 +126,58 @@ input, select { font-family: inherit; }
 .app-header.hidden { display: none; }
 
 .app-logo {
-  font-size: 14px;
-  font-weight: 300;
-  letter-spacing: 0.12em;
-  color: var(--text-s);
+  height: 26px;
+  width: auto;
+  display: block;
   cursor: pointer;
   user-select: none;
-  padding: 8px 12px;
-  margin-left: -12px;
+  filter: var(--logo-filter);
+  opacity: 0.75;
+  transition: opacity var(--trans), filter var(--trans);
+  margin-left: -4px;
+}
+.app-logo:hover  { opacity: 1; }
+.app-logo:active { opacity: 0.6; }
+
+/* Botones de cabecera (tema + mute) */
+.header-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.theme-toggle-btn {
+  background: none;
+  border: 1.5px solid var(--hdr-btn-border);
   border-radius: 8px;
-  transition: background var(--trans), color var(--trans);
+  color: var(--text-s);
+  cursor: pointer;
+  font-size: 16px;
+  height: 36px;
+  line-height: 1;
+  padding: 0 10px;
+  transition: background var(--trans), color var(--trans), border-color var(--trans);
+  user-select: none;
 }
-.app-logo:hover {
-  background: rgba(255,255,255,0.05);
+.theme-toggle-btn:hover {
+  background: var(--hdr-btn-bg-hover);
   color: var(--text);
+  border-color: var(--hdr-btn-border-hover);
 }
-.app-logo:active {
-  background: rgba(255,255,255,0.1);
+.theme-toggle-btn:active { background: var(--hdr-btn-bg-active); }
+
+/* Ajuste mute en light mode */
+body.light .tts-mute-btn {
+  border-color: var(--hdr-btn-border) !important;
+  color: var(--text-s) !important;
+}
+body.light .tts-mute-btn:hover {
+  background: var(--hdr-btn-bg-hover) !important;
+  color: var(--text) !important;
+  border-color: var(--hdr-btn-border-hover) !important;
+}
+body.light .tts-mute-btn.muted {
+  color: rgba(0,0,0,0.25) !important;
+  border-color: rgba(0,0,0,0.06) !important;
 }
 
 .step-indicator {
@@ -221,6 +280,13 @@ input, select { font-family: inherit; }
   font-weight: 300;
   letter-spacing: 0.1em;
   color: var(--text);
+}
+.brand-logo {
+  height: 56px;
+  width: auto;
+  filter: var(--logo-filter);
+  opacity: 0.9;
+  margin-bottom: 4px;
 }
 .brand-sub {
   font-size: 17px;
