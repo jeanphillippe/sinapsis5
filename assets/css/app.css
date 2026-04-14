@@ -42,7 +42,9 @@ body.light {
 body.light .paso-footer {
   background: linear-gradient(to bottom, transparent, var(--bg) 40%);
 }
-
+.light #app-main {
+    background: white;
+}
 /* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
