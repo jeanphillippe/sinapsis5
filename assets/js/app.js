@@ -403,6 +403,52 @@ syncGeneroDropdown(select) {
       }
     }
 
+    // ── Modelo cuantitativo P(DCL) ──
+    try {
+      const cuant   = ScoringCuantitativo.calcAll(AppState);
+      const pdclBlock = document.getElementById('pdcl-block');
+      if (pdclBlock) {
+        pdclBlock.classList.remove('hidden');
+
+        document.getElementById('pdcl-scnorm').textContent = cuant.scNorm.toFixed(3);
+        document.getElementById('pdcl-prob').textContent   = (cuant.pDCL * 100).toFixed(1) + '%';
+
+        const riesgoEl = document.getElementById('pdcl-riesgo');
+        const RIESGO_TEXTO = { bajo: 'Bajo', intermedio: 'Intermedio', alto: 'Alto' };
+        const RIESGO_COLOR = { bajo: '#7ab894', intermedio: '#d4a85a', alto: '#c45c5c' };
+        riesgoEl.textContent   = RIESGO_TEXTO[cuant.riesgo] || cuant.riesgo;
+        riesgoEl.style.color   = RIESGO_COLOR[cuant.riesgo] || '';
+
+        // Longitudinal
+        if (cuant.longitudinal) {
+          const longWrap = document.getElementById('pdcl-long-wrap');
+          if (longWrap) {
+            longWrap.classList.remove('hidden');
+            const signo = cuant.longitudinal.deltaSC >= 0 ? '+' : '';
+            document.getElementById('pdcl-deltaSC').textContent =
+              `${signo}${cuant.longitudinal.deltaSC.toFixed(3)}`;
+            document.getElementById('pdcl-indice').textContent =
+              `${cuant.longitudinal.indiceDeclive.toFixed(4)} / mes`;
+          }
+        }
+
+        // Alerta longitudinal
+        const alertaLongEl = document.getElementById('pdcl-alerta-long');
+        if (alertaLongEl) {
+          if (cuant.alertaLong) {
+            alertaLongEl.textContent = '⚠️ Declive sostenido detectado — se recomienda seguimiento clínico';
+            alertaLongEl.classList.remove('hidden');
+          } else {
+            alertaLongEl.classList.add('hidden');
+          }
+        }
+
+        AdminConsole.log(`P(DCL)=${cuant.pDCL} riesgo=${cuant.riesgo} SC_norm=${cuant.scNorm}`);
+      }
+    } catch(e) {
+      AdminConsole.log('Error modelo cuantitativo: ' + e.message);
+    }
+
     // Patient summary
     const p = AppState.paciente;
     const eduLabels = {
@@ -522,6 +568,8 @@ const Dashboard = {
     Dashboard.renderAlertas();
     Dashboard.renderMetricas();
     Dashboard._renderStats();
+    // Cargar configuración del modelo cuantitativo
+    DashboardModelo.init();
   },
 
   // Compatibilidad: showTab ya no navega entre tabs, solo re-renderiza todo
@@ -819,55 +867,47 @@ const Dashboard = {
     `;
   },
 
-  /* ---- TAB ALERTAS ---- */
+  /* ---- ALERTAS compactas (strip bajo stats) ---- */
   renderAlertas() {
     const db = obtenerTodosLosPacientes();
-    const container = document.getElementById('alertas-list');
-    if (!container) return;
+    const strip = document.getElementById('alertas-strip');
+    if (!strip) return;
 
-    container.innerHTML = '';
-    let hayAlertas = false;
+    strip.innerHTML = '';
 
-    const ALERTA_LABELS = {
-      memoria_baja:       { text: 'Memoria baja',          cls: 'badge-red' },
-      ejecutivo_bajo:     { text: 'Ejecutivo bajo',         cls: 'badge-red' },
-      caida_progresiva:   { text: 'Caída progresiva',       cls: 'badge-red' },
-      tiempo_aumentado:   { text: 'Tiempo aumentado',       cls: 'badge-yellow' }
+    const ALERTA_SHORT = {
+      memoria_baja:     'Mem. baja',
+      ejecutivo_bajo:   'Ejec. bajo',
+      caida_progresiva: 'Caída prog.',
+      tiempo_aumentado: 'T° alto'
     };
 
     Object.entries(db).forEach(([id, pac]) => {
       if (!pac.historial || pac.historial.length === 0) return;
       const last  = pac.historial[pac.historial.length - 1];
       const alerta = last?.scoring?.alerta;
-      const score  = last?.scoring?.scoreFinal ?? '—';
-      const fecha  = last?.fecha ? new Date(last.fecha).toLocaleDateString('es-AR') : '—';
+      if (!alerta) return;
 
-      const hasAlert = !!alerta;
-      hayAlertas = hayAlertas || hasAlert;
+      const nombre = pac.paciente?.nombre || id;
+      const tags = alerta.split('+')
+        .map(a => ALERTA_SHORT[a] || a)
+        .join(' · ');
 
-      const div = document.createElement('div');
-      div.className = 'paciente-alerta-row';
-
-      const badges = hasAlert
-        ? alerta.split('+').map(a => {
-            const info = ALERTA_LABELS[a] || { text: a, cls: 'badge-yellow' };
-            return `<span class="badge ${info.cls}">${info.text}</span>`;
-          }).join(' ')
-        : '<span class="badge badge-green">Sin alertas</span>';
-
-      div.innerHTML = `
-        <div class="pa-info">
-          <strong>${pac.paciente?.nombre || id}</strong>
-          <span style="color:var(--text-s);font-size:13px;">Score: ${score} — ${fecha}</span>
-        </div>
-        <div class="pa-badges">${badges}</div>
-      `;
-      container.appendChild(div);
+      const chip = document.createElement('div');
+      chip.className = 'dash-alert-chip';
+      chip.innerHTML = `<span class="chip-dot"></span><span class="chip-name">${nombre}</span><span class="chip-tag">${tags}</span>`;
+      chip.onclick = () => {
+        // Abrir detalle de la última evaluación del paciente
+        const db2 = obtenerTodosLosPacientes();
+        const lastIdx2 = (db2[id]?.historial?.length || 1) - 1;
+        Dashboard.verDetalleEvaluacion(id, lastIdx2);
+      };
+      strip.appendChild(chip);
     });
 
-    if (!hayAlertas && container.children.length === 0) {
-      container.innerHTML = '<p style="color:var(--text-s);margin-top:1rem;">No hay pacientes registrados.</p>';
-    }
+    // Actualizar badge en stats (ya está contabilizado en _renderStats)
+    const badge = document.getElementById('alertas-badge');
+    if (badge) badge.textContent = strip.children.length > 0 ? strip.children.length : '';
   },
 
   /* ---- TAB IMPORTAR ---- */
@@ -996,22 +1036,24 @@ const Dashboard = {
   },
 
   limpiarFiltros() {
-    document.getElementById('filtro-localidad')?.value !== undefined && (document.getElementById('filtro-localidad').value = '');
-    document.getElementById('filtro-cat-analisis').value = 'todos';
-    document.getElementById('filtro-edad-min').value = '';
-    document.getElementById('filtro-edad-max').value = '';
-    document.getElementById('filtro-solo-alertas').checked = false;
+    const ids = ['filtro-nombre','filtro-localidad','filtro-edad-min','filtro-edad-max'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const cat = document.getElementById('filtro-cat-analisis');
+    if (cat) cat.value = 'todos';
+    const chk = document.getElementById('filtro-solo-alertas');
+    if (chk) chk.checked = false;
     Dashboard.aplicarFiltros();
   },
 
   aplicarFiltros() {
+    const nombre      = (document.getElementById('filtro-nombre')?.value || '').trim().toLowerCase();
     const localidad   = (document.getElementById('filtro-localidad')?.value || '').trim().toLowerCase();
     const categoria   = document.getElementById('filtro-cat-analisis')?.value || 'todos';
     const edadMinRaw  = parseInt(document.getElementById('filtro-edad-min')?.value) || 0;
     const edadMaxRaw  = parseInt(document.getElementById('filtro-edad-max')?.value) || 110;
     const soloAlertas = document.getElementById('filtro-solo-alertas')?.checked || false;
 
-    Dashboard._filtros = { localidad, categoria, edadMin: edadMinRaw, edadMax: edadMaxRaw, soloAlertas };
+    Dashboard._filtros = { nombre, localidad, categoria, edadMin: edadMinRaw, edadMax: edadMaxRaw, soloAlertas };
 
     const db             = obtenerTodosLosPacientes();
     const pacientesLista = [];
@@ -1022,6 +1064,7 @@ const Dashboard = {
       const loc  = (p.localidad || '').toLowerCase();
 
       // Filtros a nivel paciente
+      if (nombre && !(p.nombre || '').toLowerCase().includes(nombre)) return;
       if (localidad && !loc.includes(localidad)) return;
       if (edad < edadMinRaw || edad > edadMaxRaw) return;
 
@@ -1487,10 +1530,147 @@ function _analizarTests(tests) {
 }
 
 /* ============================================================
+   DASHBOARD MODELO — Gestión de coeficientes β P(DCL)
+   ============================================================ */
+const DashboardModelo = {
+
+  init() {
+    const cfg = ScoringCuantitativo.cargarConfig();
+    this._aplicarConfig(cfg);
+  },
+
+  _aplicarConfig(cfg) {
+    // Checkbox modo auto
+    const chk = document.getElementById('beta-modo-auto');
+    if (chk) chk.checked = !!cfg.modoAuto;
+
+    // Inputs β (usa betaAuto si modoAuto, si no usa beta manual)
+    const beta = (cfg.modoAuto && cfg.betaAuto) ? cfg.betaAuto : cfg.beta;
+    this._setInputs(beta);
+    this._toggleInputs(!!cfg.modoAuto);
+
+    // Mostrar info auto
+    const infoEl = document.getElementById('beta-auto-info');
+    if (infoEl) infoEl.style.display = cfg.modoAuto ? 'block' : 'none';
+
+    // Mostrar β calibrados
+    this._mostrarCalibrados(cfg);
+  },
+
+  _setInputs(beta) {
+    const fields = { 'beta-b0': 'b0', 'beta-b1': 'b1', 'beta-b2': 'b2', 'beta-b3': 'b3' };
+    Object.entries(fields).forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = beta[key] !== undefined ? beta[key] : ScoringCuantitativo.getBetaDefault()[key];
+    });
+  },
+
+  _toggleInputs(disabled) {
+    const wrap = document.getElementById('beta-inputs-wrap');
+    if (!wrap) return;
+    wrap.querySelectorAll('input').forEach(inp => {
+      inp.disabled = disabled;
+      inp.style.opacity = disabled ? '0.5' : '1';
+    });
+    const btnGuardar = document.getElementById('btn-beta-guardar');
+    if (btnGuardar) btnGuardar.disabled = disabled;
+  },
+
+  _mostrarCalibrados(cfg) {
+    const wrap = document.getElementById('beta-calibrado-wrap');
+    const vals = document.getElementById('beta-calibrado-vals');
+    if (!wrap || !vals) return;
+
+    if (cfg.modoAuto && cfg.betaAuto) {
+      wrap.style.display = 'block';
+      const b = cfg.betaAuto;
+      vals.innerHTML = `β₀ = ${b.b0} &nbsp;|&nbsp; β₁ = ${b.b1} &nbsp;|&nbsp; β₂ = ${b.b2} &nbsp;|&nbsp; β₃ = ${b.b3}
+        ${cfg.nPacientes ? `<br><span style="color:#7ab894">Calibrado con ${cfg.nPacientes} registros</span>` : ''}`;
+    } else {
+      wrap.style.display = 'none';
+    }
+  },
+
+  toggleModoAuto(enabled) {
+    const cfg = ScoringCuantitativo.cargarConfig();
+    cfg.modoAuto = enabled;
+
+    if (enabled && !cfg.betaAuto) {
+      // Intentar calibrar al activar
+      this._mostrarStatus('Calibrando con datos del sistema…', '#d4a85a');
+      const res = ScoringCuantitativo.calibrar();
+      if (res.ok) {
+        cfg.betaAuto   = res.beta;
+        cfg.calibrado  = true;
+        cfg.nPacientes = res.n;
+        ScoringCuantitativo.guardarConfig(cfg);
+        this._mostrarStatus(`✓ Calibración exitosa con ${res.n} registros.`, '#7ab894');
+      } else {
+        this._mostrarStatus(`⚠️ ${res.msg}`, '#d4a85a');
+        cfg.modoAuto = false;
+        const chk = document.getElementById('beta-modo-auto');
+        if (chk) chk.checked = false;
+      }
+    } else {
+      ScoringCuantitativo.guardarConfig(cfg);
+    }
+
+    this._aplicarConfig(cfg);
+  },
+
+  onBetaChange() {
+    // Solo acción visual — guardar al presionar el botón
+  },
+
+  guardar() {
+    const cfg = ScoringCuantitativo.cargarConfig();
+    cfg.beta = {
+      b0: parseFloat(document.getElementById('beta-b0')?.value) || 0,
+      b1: parseFloat(document.getElementById('beta-b1')?.value) || 0,
+      b2: parseFloat(document.getElementById('beta-b2')?.value) || 0,
+      b3: parseFloat(document.getElementById('beta-b3')?.value) || 0
+    };
+    ScoringCuantitativo.guardarConfig(cfg);
+    this._mostrarStatus('✓ Coeficientes β guardados correctamente.', '#7ab894');
+    AdminConsole.log(`β guardados: ${JSON.stringify(cfg.beta)}`);
+  },
+
+  calibrar() {
+    this._mostrarStatus('Calibrando…', '#d4a85a');
+    const res = ScoringCuantitativo.calibrar();
+    if (res.ok) {
+      const cfg = ScoringCuantitativo.cargarConfig();
+      this._mostrarStatus(`✓ Calibración exitosa con ${res.n} registros. β=[${res.beta.b0}, ${res.beta.b1}, ${res.beta.b2}, ${res.beta.b3}]`, '#7ab894');
+      this._aplicarConfig(cfg);
+    } else {
+      this._mostrarStatus(`⚠️ ${res.msg || 'No se pudo calibrar'}`, '#d4a85a');
+    }
+  },
+
+  resetDefaults() {
+    const defaults = ScoringCuantitativo.getBetaDefault();
+    this._setInputs(defaults);
+    const cfg = ScoringCuantitativo.cargarConfig();
+    cfg.beta = { ...defaults };
+    ScoringCuantitativo.guardarConfig(cfg);
+    this._mostrarStatus('Valores por defecto restaurados.', '#7ab894');
+  },
+
+  _mostrarStatus(msg, color) {
+    const el = document.getElementById('beta-status');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.color   = color || 'var(--text)';
+    el.textContent   = msg;
+  }
+};
+
+/* ============================================================
    INIT
    ============================================================ */
 document.addEventListener('DOMContentLoaded', () => {
   AdminConsole.init();
+  DashboardModelo.init();
 
   const p0 = document.getElementById('paso-0');
   if (p0) p0.classList.add('active');

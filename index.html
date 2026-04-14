@@ -244,6 +244,37 @@
         <!-- Info caída longitudinal -->
         <div class="hidden" id="caida-info" style="text-align:center;margin:-12px 0 16px;font-size:14px;"></div>
 
+        <!-- Bloque de riesgo cuantitativo P(DCL) -->
+        <div id="pdcl-block" class="pdcl-block hidden">
+          <div class="pdcl-titulo">Riesgo cognitivo (modelo cuantitativo)</div>
+          <div class="pdcl-row">
+            <div class="pdcl-item">
+              <div class="pdcl-label">SC normalizado</div>
+              <div class="pdcl-val" id="pdcl-scnorm">—</div>
+            </div>
+            <div class="pdcl-item">
+              <div class="pdcl-label">P(DCL)</div>
+              <div class="pdcl-val" id="pdcl-prob">—</div>
+            </div>
+            <div class="pdcl-item">
+              <div class="pdcl-label">Nivel de riesgo</div>
+              <div class="pdcl-val pdcl-riesgo" id="pdcl-riesgo">—</div>
+            </div>
+          </div>
+          <!-- Longitudinal (solo si hay historial) -->
+          <div id="pdcl-long-wrap" class="pdcl-long-wrap hidden">
+            <div class="pdcl-long-row">
+              <span class="pdcl-long-label">ΔSC vs. sesión anterior:</span>
+              <span id="pdcl-deltaSC">—</span>
+            </div>
+            <div class="pdcl-long-row">
+              <span class="pdcl-long-label">Índice de declive (SC/mes):</span>
+              <span id="pdcl-indice">—</span>
+            </div>
+          </div>
+          <div id="pdcl-alerta-long" class="alerta-clinica hidden" style="margin-top:0.6rem;font-size:13px;"></div>
+        </div>
+
         <!-- Tabla de dominios -->
         <div class="results-table-wrap">
           <table class="tabla-dominios" id="results-table">
@@ -291,36 +322,8 @@
 
     <!-- Stats strip -->
     <div class="dash-stats" id="dash-stats-row"></div>
-
-    <!-- ── SECCIÓN: Evolución ── -->
-    <section class="dash-section">
-      <div class="dash-section-header">
-        <span class="dash-section-title">Evolución</span>
-        <div class="chart-view-toggle">
-          <button class="active" id="btn-vista-total"   onclick="Dashboard.setVista('total')">Score total</button>
-          <button             id="btn-vista-dominios" onclick="Dashboard.setVista('dominios')">Por dominio</button>
-        </div>
-      </div>
-      <div id="filtro-cat-wrap" class="dash-control-row">
-        <label>Categoría</label>
-        <select id="filtro-categoria" class="input-select input-select-sm" onchange="Dashboard.filtrarCategoria()">
-          <option value="todos">Todos</option>
-          <option value="normal">Normal</option>
-          <option value="sospechoso">Sospechoso</option>
-          <option value="alto_riesgo">Alto riesgo</option>
-        </select>
-      </div>
-      <div id="selector-paciente-wrap" class="dash-control-row" style="display:none">
-        <label>Paciente</label>
-        <select id="selector-paciente" class="input-select input-select-sm" onchange="Dashboard.renderDominios()"></select>
-      </div>
-      <div style="position:relative;height:260px;margin-top:0.75rem;">
-        <canvas id="chart-general"></canvas>
-      </div>
-      <div id="dash-dominios-nota" class="dash-nota" style="display:none">
-        Eje Y: puntaje por dominio (0–5). Score total normalizado (÷6.4).
-      </div>
-    </section>
+    <!-- Alertas compactas integradas bajo stats -->
+    <div class="dash-alerts-strip" id="alertas-strip"></div>
 
     <!-- ── SECCIÓN: Análisis clínico ── -->
     <section class="dash-section">
@@ -328,41 +331,24 @@
         <span class="dash-section-title">Análisis clínico</span>
       </div>
 
-      <!-- Filtros -->
+      <!-- Filtros — una sola línea -->
       <div class="analisis-filtros">
-        <div class="filtro-grupo">
-          <label>Localidad</label>
-          <input type="text" id="filtro-localidad" class="input-text filtro-input"
-                 placeholder="Ej: Córdoba" oninput="Dashboard.aplicarFiltros()">
-        </div>
-        <div class="filtro-grupo">
-          <label>Categoría</label>
-          <select id="filtro-cat-analisis" class="input-select filtro-input" onchange="Dashboard.aplicarFiltros()">
-            <option value="todos">Todas</option>
-            <option value="normal">Normal</option>
-            <option value="sospechoso">Sospechoso</option>
-            <option value="alto_riesgo">Alto riesgo</option>
-          </select>
-        </div>
-        <div class="filtro-grupo">
-          <label>Edad</label>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input type="number" id="filtro-edad-min" class="input-text filtro-input" placeholder="Min"
-                   min="18" max="110" style="width:70px;" oninput="Dashboard.aplicarFiltros()">
-            <span style="color:var(--text-s);font-size:13px;">–</span>
-            <input type="number" id="filtro-edad-max" class="input-text filtro-input" placeholder="Max"
-                   min="18" max="110" style="width:70px;" oninput="Dashboard.aplicarFiltros()">
-          </div>
-        </div>
-        <div class="filtro-grupo filtro-check">
-          <label>
-            <input type="checkbox" id="filtro-solo-alertas" onchange="Dashboard.aplicarFiltros()">
-            Solo con alertas
-          </label>
-        </div>
-        <button class="btn-ghost btn-sm" onclick="Dashboard.limpiarFiltros()" style="align-self:flex-end;">
-          Limpiar
-        </button>
+        <input type="text" id="filtro-nombre" class="input-text filtro-input" placeholder="Nombre…" oninput="Dashboard.aplicarFiltros()">
+        <input type="text" id="filtro-localidad" class="input-text filtro-input" placeholder="Localidad…" oninput="Dashboard.aplicarFiltros()">
+        <select id="filtro-cat-analisis" class="input-select filtro-input" onchange="Dashboard.aplicarFiltros()">
+          <option value="todos">Todas</option>
+          <option value="normal">Normal</option>
+          <option value="sospechoso">Sospechoso</option>
+          <option value="alto_riesgo">Alto riesgo</option>
+        </select>
+        <input type="number" id="filtro-edad-min" class="input-text filtro-input filtro-edad" placeholder="Edad min" min="18" max="110" oninput="Dashboard.aplicarFiltros()">
+        <span class="filtro-sep">–</span>
+        <input type="number" id="filtro-edad-max" class="input-text filtro-input filtro-edad" placeholder="Max" min="18" max="110" oninput="Dashboard.aplicarFiltros()">
+        <label class="filtro-check">
+          <input type="checkbox" id="filtro-solo-alertas" onchange="Dashboard.aplicarFiltros()">
+          Alertas
+        </label>
+        <button class="btn-ghost btn-sm filtro-limpiar-btn" onclick="Dashboard.limpiarFiltros()">Limpiar</button>
       </div>
 
       <div id="analisis-count" style="font-size:13px;color:var(--text-s);margin-bottom:0.75rem;"></div>
@@ -414,20 +400,62 @@
       </div>
     </section>
 
-    <!-- ── SECCIÓN: Alertas ── -->
+    <!-- ── SECCIÓN: Evolución ── -->
     <section class="dash-section">
       <div class="dash-section-header">
-        <span class="dash-section-title">Alertas</span>
-        <span class="dash-section-badge" id="alertas-badge"></span>
+        <span class="dash-section-title">Evolución</span>
+        <div class="chart-view-toggle">
+          <button class="active" id="btn-vista-total"   onclick="Dashboard.setVista('total')">Score total</button>
+          <button             id="btn-vista-dominios" onclick="Dashboard.setVista('dominios')">Por dominio</button>
+        </div>
       </div>
-      <div id="alertas-list" style="display:flex;flex-direction:column;gap:0.75rem;margin-top:0.5rem;"></div>
+      <div id="filtro-cat-wrap" class="dash-control-row">
+        <label>Categoría</label>
+        <select id="filtro-categoria" class="input-select input-select-sm" onchange="Dashboard.filtrarCategoria()">
+          <option value="todos">Todos</option>
+          <option value="normal">Normal</option>
+          <option value="sospechoso">Sospechoso</option>
+          <option value="alto_riesgo">Alto riesgo</option>
+        </select>
+      </div>
+      <div id="selector-paciente-wrap" class="dash-control-row" style="display:none">
+        <label>Paciente</label>
+        <select id="selector-paciente" class="input-select input-select-sm" onchange="Dashboard.renderDominios()"></select>
+      </div>
+      <div style="position:relative;height:260px;margin-top:0.75rem;">
+        <canvas id="chart-general"></canvas>
+      </div>
+      <div id="dash-dominios-nota" class="dash-nota" style="display:none">
+        Eje Y: puntaje por dominio (0–5). Score total normalizado (÷6.4).
+      </div>
     </section>
 
-    <!-- ── SECCIÓN: Datos ── -->
+    <!-- ── SECCIÓN: Métricas ── -->
     <section class="dash-section">
       <div class="dash-section-header">
-        <span class="dash-section-title">Importar / Exportar</span>
+        <span class="dash-section-title">Métricas</span>
       </div>
+      <div class="metricas-grid">
+        <div class="metrica-card">
+          <div class="metrica-label">% Completitud</div>
+          <div class="metrica-val" id="met-completitud">—</div>
+        </div>
+        <div class="metrica-card">
+          <div class="metrica-label">Tiempo promedio</div>
+          <div class="metrica-val" id="met-tiempo">—</div>
+        </div>
+      </div>
+      <div style="position:relative;height:220px;margin-top:1.25rem;">
+        <canvas id="chart-dist"></canvas>
+      </div>
+    </section>
+
+    <!-- ── SECCIÓN: Importar / Exportar (colapsable) ── -->
+    <details class="dash-section dash-section-collapsible">
+      <summary class="dash-section-header">
+        <span class="dash-section-title">Importar / Exportar</span>
+        <span class="dash-section-chevron">▾</span>
+      </summary>
       <div class="datos-grid">
         <div>
           <p class="dash-nota" style="margin-bottom:0.75rem;">Importá archivos JSON exportados desde Sinapsis 5.</p>
@@ -455,26 +483,73 @@
           <div id="export-zip-log" class="dash-log"></div>
         </div>
       </div>
-    </section>
+    </details>
 
-    <!-- ── SECCIÓN: Métricas ── -->
-    <section class="dash-section">
+    <!-- ── SECCIÓN: Modelo cuantitativo (coeficientes β) ── -->
+    <section class="dash-section" id="seccion-modelo-cuant">
       <div class="dash-section-header">
-        <span class="dash-section-title">Métricas</span>
+        <span class="dash-section-title">Modelo de Riesgo Cognitivo (P·DCL)</span>
       </div>
-      <div class="metricas-grid">
-        <div class="metrica-card">
-          <div class="metrica-label">% Completitud</div>
-          <div class="metrica-val" id="met-completitud">—</div>
+
+      <p class="dash-nota" style="margin-bottom:1rem;">
+        Configura los coeficientes del modelo logístico para el cálculo de probabilidad de Deterioro Cognitivo Leve.<br>
+        <em>z = β₀ + β₁·SC_norm + β₂·edad + β₃·educación → P(DCL) = 1/(1+e⁻ᶻ)</em>
+      </p>
+
+      <!-- Modo calibración automática -->
+      <div class="beta-modo-row" style="margin-bottom:1rem;padding:0.75rem;background:rgba(255,255,255,0.04);border-radius:10px;border:1.5px solid rgba(255,255,255,0.08);">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;">
+          <input type="checkbox" id="beta-modo-auto" onchange="DashboardModelo.toggleModoAuto(this.checked)"
+                 style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary);">
+          <span>Calibrar β automáticamente desde datos del sistema</span>
+        </label>
+        <div id="beta-auto-info" class="dash-nota" style="margin-top:0.5rem;margin-left:28px;display:none;">
+          El sistema usará los registros históricos con diagnóstico confirmado para recalcular los coeficientes vía regresión logística.
+          Mínimo recomendado: ≥ 30 pacientes con diagnóstico confirmado.
         </div>
-        <div class="metrica-card">
-          <div class="metrica-label">Tiempo promedio</div>
-          <div class="metrica-val" id="met-tiempo">—</div>
+      </div>
+
+      <!-- Inputs β -->
+      <div class="beta-grid" id="beta-inputs-wrap"
+           style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+        <div>
+          <label class="beta-label">β₀ (intercepto)</label>
+          <input type="number" id="beta-b0" step="0.0001" class="input-text"
+                 style="width:100%;font-size:15px;" oninput="DashboardModelo.onBetaChange()">
+        </div>
+        <div>
+          <label class="beta-label">β₁ (SC_norm)</label>
+          <input type="number" id="beta-b1" step="0.0001" class="input-text"
+                 style="width:100%;font-size:15px;" oninput="DashboardModelo.onBetaChange()">
+        </div>
+        <div>
+          <label class="beta-label">β₂ (edad)</label>
+          <input type="number" id="beta-b2" step="0.0001" class="input-text"
+                 style="width:100%;font-size:15px;" oninput="DashboardModelo.onBetaChange()">
+        </div>
+        <div>
+          <label class="beta-label">β₃ (educación)</label>
+          <input type="number" id="beta-b3" step="0.0001" class="input-text"
+                 style="width:100%;font-size:15px;" oninput="DashboardModelo.onBetaChange()">
         </div>
       </div>
-      <div style="position:relative;height:220px;margin-top:1.25rem;">
-        <canvas id="chart-dist"></canvas>
+
+      <!-- Acciones -->
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
+        <button class="btn-primary" id="btn-beta-guardar" onclick="DashboardModelo.guardar()">Guardar β</button>
+        <button class="btn-secondary" id="btn-beta-calibrar" onclick="DashboardModelo.calibrar()">Calibrar ahora</button>
+        <button class="btn-ghost btn-sm" onclick="DashboardModelo.resetDefaults()">Restaurar defaults</button>
       </div>
+
+      <!-- Estado / resultado -->
+      <div id="beta-status" class="dash-log" style="min-height:40px;display:none;"></div>
+
+      <!-- β calibrados (solo lectura cuando modoAuto está activo) -->
+      <div id="beta-calibrado-wrap" style="display:none;margin-top:0.75rem;padding:0.75rem;background:rgba(122,184,148,0.08);border:1.5px solid rgba(122,184,148,0.25);border-radius:10px;">
+        <div style="font-size:13px;font-weight:600;color:#7ab894;margin-bottom:0.4rem;">β calibrados (activos):</div>
+        <div id="beta-calibrado-vals" style="font-size:13px;font-family:monospace;color:var(--text-s);"></div>
+      </div>
+
     </section>
 
    </div><!-- /dash-inner -->

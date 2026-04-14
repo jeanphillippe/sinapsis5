@@ -946,6 +946,69 @@ input, select { font-family: inherit; }
 }
 .dash-stat-warn .dash-stat-val { color: var(--warning); }
 
+/* Alertas compactas bajo stats strip */
+.dash-alerts-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  min-height: 0;
+}
+.dash-alerts-strip:empty { display: none; margin-bottom: 0; }
+.dash-alerts-strip::-webkit-scrollbar { display: none; }
+.dash-alert-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(196,92,92,0.1);
+  border: 1px solid rgba(196,92,92,0.28);
+  border-radius: 99px;
+  padding: 4px 10px 4px 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--trans);
+}
+.dash-alert-chip:hover { background: rgba(196,92,92,0.2); }
+.dash-alert-chip .chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #e08888;
+  flex-shrink: 0;
+}
+.dash-alert-chip .chip-name { color: var(--text); font-weight: 500; }
+.dash-alert-chip .chip-tag  { color: #e08888; font-size: 11px; }
+
+/* Sección colapsable (details/summary) */
+details.dash-section-collapsible {
+  cursor: default;
+}
+details.dash-section-collapsible > summary {
+  list-style: none;
+  cursor: pointer;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+details.dash-section-collapsible > summary::-webkit-details-marker { display: none; }
+details.dash-section-collapsible[open] > summary {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.dash-section-chevron {
+  color: var(--text-s);
+  font-size: 13px;
+  transition: transform var(--trans);
+  flex-shrink: 0;
+}
+details.dash-section-collapsible[open] .dash-section-chevron {
+  transform: rotate(180deg);
+}
+
 /* Secciones del dashboard */
 .dash-section {
   background: var(--surface);
@@ -1134,48 +1197,56 @@ input, select { font-family: inherit; }
    TAB ANÁLISIS CLÍNICO
    ============================================================ */
 
-/* Barra de filtros */
+/* Barra de filtros — una sola línea */
 .analisis-filtros {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: flex-end;
-  background: var(--surface);
-  border-radius: var(--r-card);
-  padding: 0.85rem 1rem;
-  margin-bottom: 1rem;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
 }
-.filtro-grupo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.filtro-grupo label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-s);
-}
+.analisis-filtros::-webkit-scrollbar { display: none; }
 .filtro-input {
-  font-size: 14px !important;
-  padding: 8px 10px !important;
+  font-size: 13px !important;
+  padding: 7px 10px !important;
   min-height: auto !important;
   border-radius: 10px !important;
+  flex-shrink: 0;
 }
-.filtro-check label {
+.filtro-input.input-text { width: 120px; }
+.filtro-input.input-select { width: 120px; padding-right: 28px !important; }
+.filtro-edad { width: 76px !important; }
+.filtro-sep {
+  color: var(--text-s);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.filtro-check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
-  text-transform: none;
-  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .filtro-check input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.filtro-limpiar-btn {
+  width: auto !important;
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .analisis-empty {
   color: var(--text-s);
@@ -1582,4 +1653,82 @@ input, select { font-family: inherit; }
   font-size: 24px;
   font-weight: 500;
   color: var(--text);
+}
+
+/* ============================================================
+   MODELO CUANTITATIVO — Bloque P(DCL) en resultados
+   ============================================================ */
+.pdcl-block {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  padding: 1rem 1.25rem;
+  margin: 0 auto 1.25rem;
+  max-width: 520px;
+  border: 1.5px solid rgba(255,255,255,0.07);
+}
+.pdcl-titulo {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-s);
+  margin-bottom: 0.75rem;
+}
+.pdcl-row {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.pdcl-item {
+  flex: 1;
+  min-width: 80px;
+  text-align: center;
+}
+.pdcl-label {
+  font-size: 11px;
+  color: var(--text-s);
+  margin-bottom: 4px;
+}
+.pdcl-val {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+.pdcl-riesgo {
+  font-size: 16px;
+}
+.pdcl-long-wrap {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pdcl-long-row {
+  font-size: 13px;
+  color: var(--text-s);
+  display: flex;
+  gap: 6px;
+}
+.pdcl-long-label {
+  color: var(--text-s);
+}
+
+/* ============================================================
+   DASHBOARD MODELO — Sección β
+   ============================================================ */
+.beta-label {
+  font-size: 12px;
+  color: var(--text-s);
+  display: block;
+  margin-bottom: 4px;
+}
+#beta-status {
+  font-size: 13px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-top: 0.25rem;
 }
