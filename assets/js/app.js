@@ -249,7 +249,17 @@ const App = {
     btn.classList.add('selected');
     App.validatePaso1();
   },
+syncGeneroDropdown(select) {
+  const val = select.value;
+  if (!val) return;
 
+  const group = select.closest('.toggle-group');
+  const btn = group.querySelector(`.toggle-btn[data-val="${val}"]`);
+
+  if (btn) {
+    btn.click(); // reutiliza TODO lo existente
+  }
+},
   /* ---- PASO 2: Memorización ---- */
   paso2Init() {
     const pool   = shuffle([...BANK_PALABRAS]);

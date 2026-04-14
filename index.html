@@ -63,9 +63,27 @@
   <div class="field-group">
     <label class="field-label">Género</label>
     <div class="toggle-group" id="genero-group">
-      <button class="toggle-btn" data-val="masculino" onclick="App.selectToggle('genero','masculino',this)">Masculino</button>
-      <button class="toggle-btn" data-val="femenino" onclick="App.selectToggle('genero','femenino',this)">Femenino</button>
-    </div>
+  <!-- Dropdown visible -->
+  <select onchange="App.syncGeneroDropdown(this)" class="input-select">
+    <option value="">Seleccionar...</option>
+    <option value="masculino">Masculino</option>
+    <option value="femenino">Femenino</option>
+  </select>
+
+  <!-- Botones originales (ocultos) -->
+  <button class="toggle-btn" data-val="masculino"
+    onclick="App.selectToggle('genero','masculino',this)"
+    style="display:none;">
+    Masculino
+  </button>
+
+  <button class="toggle-btn" data-val="femenino"
+    onclick="App.selectToggle('genero','femenino',this)"
+    style="display:none;">
+    Femenino
+  </button>
+</div>
+    
   </div>
 </div>
 
@@ -91,7 +109,7 @@
 
         <div class="field-group">
           <label class="field-label">Localidad</label>
-          <input type="text" id="f-localidad" class="input-text" placeholder="Ciudad o localidad" autocomplete="off">
+          <input type="text" id="f-localidad" class="input-text" placeholder="Ciudad o localidad" value="Santa Rosa" autocomplete="off">
         </div>
 
         <div class="field-group">
